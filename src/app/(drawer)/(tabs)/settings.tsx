@@ -1,11 +1,39 @@
-import { View, Text, ScrollView, Switch } from 'react-native';
+import { View, Text, ScrollView, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { syncService } from '../../../services/syncService';
 import { useTheme } from '../../../contexts/themeContext';
 
 export default function Settings() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+
+  // Keep track of auto sync state and start/stop sync accordingly
+  const handleAutoSyncToggle = useCallback(async (value: boolean) => {
+    setAutoSyncEnabled(value);
+    try {
+      if (value) {
+        await syncService.startSync();
+        Alert.alert('Auto Sync Enabled', 'Automatic background sync is now ON.');
+      } else {
+        await syncService.stopSync();
+        Alert.alert('Auto Sync Disabled', 'Automatic background sync is now OFF.');
+      }
+    } catch (err: any) {
+      Alert.alert('Sync Error', err.message || 'Failed to update auto sync.');
+    }
+  }, []);
+
+  // On mount, ensure auto sync is started if enabled
+  useEffect(() => {
+    if (autoSyncEnabled) {
+      syncService.startSync();
+    } else {
+      syncService.stopSync();
+    }
+    // No cleanup needed, handled by toggle
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const { isDarkMode, toggleDarkMode } = useTheme();
 
   return (
@@ -57,7 +85,7 @@ export default function Settings() {
               <Text className={`text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Auto Sync</Text>
               <Switch
                 value={autoSyncEnabled}
-                onValueChange={setAutoSyncEnabled}
+                onValueChange={handleAutoSyncToggle}
                 trackColor={{ false: '#767577', true: '#007AFF' }}
                 thumbColor={autoSyncEnabled ? '#fff' : '#f4f3f4'}
               />
