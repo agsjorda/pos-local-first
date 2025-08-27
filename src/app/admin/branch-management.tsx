@@ -1,8 +1,9 @@
+import { useDebounce } from '~/hooks/useDebounce';
 import { View, Text, Pressable, TextInput, Alert, FlatList, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useTheme } from '../../contexts/themeContext';
-import { useState, useEffect } from 'react';
+import { useTheme } from '~/contexts/themeContext';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '~/contexts/authContext';
 import { createBranch, getBranches, assignUserToBranch } from '~/services/branchService';
@@ -19,6 +20,8 @@ const BranchManagementScreen = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [search, setSearch] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const debouncedSearch = useDebounce(search, 300);
   const [showModal, setShowModal] = useState(false);
   const [editBranch, setEditBranch] = useState<Branch | null>(null);
 
@@ -30,6 +33,7 @@ const BranchManagementScreen = () => {
 
   const loadBranches = async () => {
     setLoadingBranches(true);
+    setError(null);
     try {
       const data = await getBranches();
       if (Array.isArray(data)) {
@@ -37,8 +41,9 @@ const BranchManagementScreen = () => {
       } else {
         setBranches([]);
       }
-    } catch (e) {
+    } catch (e: any) {
       setBranches([]);
+      setError(e?.message || e?.toString() || 'Failed to load branches');
     } finally {
       setLoadingBranches(false);
     }
@@ -47,6 +52,11 @@ const BranchManagementScreen = () => {
   useEffect(() => {
     loadBranches();
   }, []);
+
+  // If you want to trigger remote search, use debouncedSearch in an effect
+  // useEffect(() => {
+  //   // fetch or filter using debouncedSearch
+  // }, [debouncedSearch]);
 
   const handleCreateOrEditBranch = async () => {
     if (!branchName.trim() || !branchAddress.trim()) {
@@ -102,16 +112,30 @@ const BranchManagementScreen = () => {
   };
 
   if (loading || !profile || profile.role !== 'admin') {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
+      </View>
+    );
   }
 
-  // Filter branches by search
-  const filteredBranches = search.trim()
-    ? branches.filter(b => b.name.toLowerCase().includes(search.trim().toLowerCase()))
+  // Filter branches by debounced search
+  const filteredBranches = debouncedSearch.trim()
+    ? branches.filter(b => b.name.toLowerCase().includes(debouncedSearch.trim().toLowerCase()))
     : branches;
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
+      {loadingBranches && (
+        <View style={{ padding: 12, alignItems: 'center' }}>
+          <Text>Loading branches...</Text>
+        </View>
+      )}
+      {error && (
+        <View style={{ padding: 12, alignItems: 'center' }}>
+          <Text style={{ color: 'red' }}>{error}</Text>
+        </View>
+      )}
 
 
       {/* Modal for Add Branch */}

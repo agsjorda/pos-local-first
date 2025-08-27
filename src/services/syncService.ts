@@ -91,8 +91,15 @@ class SyncService {
       await this.pushLocalChanges();
       await this.pullRemoteChanges();
       this.lastSyncTimestamp = new Date().toISOString();
-    } catch (error) {
-      console.error('Sync failed:', error);
+    } catch (error: any) {
+      // User-friendly error handling
+      let message = 'Sync failed.';
+      if (error?.message) {
+        message += ' ' + error.message;
+      }
+      // Optionally, use a toast/snackbar here for UI feedback
+      console.error(message, error);
+      // Optionally, rethrow or handle error for UI
     } finally {
       this.syncInProgress = false;
     }
@@ -160,13 +167,13 @@ class SyncService {
       }
     }
   }
-  private async getLocalBranchAssignments(): Promise<any[]> {
+  public async getLocalBranchAssignments(): Promise<any[]> {
     await this.ensureInitialized();
     const db = this.getDatabase();
     return db.getAllSync<any>('SELECT * FROM branch_assignments');
   }
 
-  private async upsertLocalBranchAssignment(assignment: any): Promise<void> {
+  public async upsertLocalBranchAssignment(assignment: any): Promise<void> {
     await this.ensureInitialized();
     const db = this.getDatabase();
     db.runSync(
@@ -181,19 +188,19 @@ class SyncService {
       ]
     );
   }
-  private async getUnsyncedBranches(): Promise<any[]> {
+  public async getUnsyncedBranches(): Promise<any[]> {
     await this.ensureInitialized();
     const db = this.getDatabase();
     return db.getAllSync<any>('SELECT * FROM branches WHERE is_synced = 0');
   }
 
-  private async markBranchSynced(id: string): Promise<void> {
+  public async markBranchSynced(id: string): Promise<void> {
     await this.ensureInitialized();
     const db = this.getDatabase();
     db.runSync('UPDATE branches SET is_synced = 1, synced_at = CURRENT_TIMESTAMP WHERE id = ?', [id]);
   }
 
-  private async upsertLocalBranch(branch: any): Promise<void> {
+  public async upsertLocalBranch(branch: any): Promise<void> {
     await this.ensureInitialized();
     const db = this.getDatabase();
     db.runSync(
@@ -212,13 +219,13 @@ class SyncService {
     );
   }
 
-  private async getUnsyncedProfiles(): Promise<Profile[]> {
+  public async getUnsyncedProfiles(): Promise<Profile[]> {
     await this.ensureInitialized();
     const db = this.getDatabase();
     return db.getAllSync<Profile>('SELECT * FROM profiles WHERE is_synced = 0');
   }
 
-  private async markProfileSynced(id: string): Promise<void> {
+  public async markProfileSynced(id: string): Promise<void> {
     await this.ensureInitialized();
     const db = this.getDatabase();
     db.runSync('UPDATE profiles SET is_synced = 1, synced_at = CURRENT_TIMESTAMP WHERE id = ?', [
@@ -226,7 +233,7 @@ class SyncService {
     ]);
   }
 
-  private async upsertLocalProfile(profile: Profile): Promise<void> {
+  public async upsertLocalProfile(profile: Profile): Promise<void> {
     await this.ensureInitialized();
     const db = this.getDatabase();
     db.runSync(

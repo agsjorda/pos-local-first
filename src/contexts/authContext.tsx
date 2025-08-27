@@ -84,8 +84,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
+    supabase.auth.getSession().then(({ data, error }: { data: { session: Session | null }, error?: any }) => {
       if (!mounted) return;
+      if (error && error.message && error.message.includes('Invalid Refresh Token')) {
+        // Handle invalid refresh token: clear session and redirect to login
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        AsyncStorage.removeItem('cached_profile');
+        router.replace('/sign-in');
+        return;
+      }
       setSession(data.session);
       setUser(data.session?.user ?? null);
       if (data.session?.user) {
