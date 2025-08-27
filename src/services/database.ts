@@ -26,12 +26,7 @@ export const saveLocalProfile = (profile: Profile): Promise<void> => {
   db.runSync(
     `INSERT OR REPLACE INTO profiles (id, email, name, role, synced_at, is_synced)
      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, 1);`,
-    [
-      profile.id ?? null,
-      profile.email ?? null,
-      profile.name ?? null,
-      profile.role ?? null
-    ]
+    [profile.id ?? null, profile.email ?? null, profile.name ?? null, profile.role ?? null]
   );
   return Promise.resolve();
 };
@@ -42,7 +37,9 @@ export const getUnsynced = (): Promise<Profile[]> => {
 };
 
 export const markAsSynced = (userId: string): Promise<void> => {
-  db.runSync('UPDATE profiles SET is_synced = 1, synced_at = CURRENT_TIMESTAMP WHERE id = ?', [userId]);
+  db.runSync('UPDATE profiles SET is_synced = 1, synced_at = CURRENT_TIMESTAMP WHERE id = ?', [
+    userId,
+  ]);
   return Promise.resolve();
 };
 
