@@ -6,6 +6,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '~/contexts/authContext';
 import { createBranch, getBranches, assignUserToBranch } from '~/services/branchService';
+import { deleteBranch, updateBranch } from '~/services/branchEditService';
+import { deleteLocalBranch, updateLocalBranch } from '~/services/localBranch';
 import { Branch } from '~/types';
 
 const BranchManagementScreen = () => {
@@ -18,6 +20,7 @@ const BranchManagementScreen = () => {
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editBranch, setEditBranch] = useState<Branch | null>(null);
 
   useEffect(() => {
     if (!loading && (!profile || profile.role !== 'admin')) {
@@ -45,22 +48,57 @@ const BranchManagementScreen = () => {
     loadBranches();
   }, []);
 
-  const handleCreateBranch = async () => {
+  const handleCreateOrEditBranch = async () => {
     if (!branchName.trim() || !branchAddress.trim()) {
       Alert.alert('Validation', 'Branch name and address are required');
       return;
     }
     try {
-      const newBranch = await createBranch({ name: branchName.trim(), address: branchAddress.trim() });
+      if (editBranch) {
+        // Edit branch
+        const updated = await updateBranch(editBranch.id, { name: branchName.trim(), address: branchAddress.trim() });
+        await updateLocalBranch(editBranch.id, { name: branchName.trim(), address: branchAddress.trim(), updated_at: new Date().toISOString() });
+        setBranches(prev => prev.map(b => b.id === editBranch.id ? { ...b, ...updated } : b));
+        setEditBranch(null);
+        Alert.alert('Success', 'Branch updated');
+      } else {
+        // Create branch
+        const newBranch = await createBranch({ name: branchName.trim(), address: branchAddress.trim() });
+        setBranches(prev => [newBranch, ...prev]);
+        Alert.alert('Success', 'Branch created');
+      }
       setBranchName('');
       setBranchAddress('');
       setShowModal(false);
-      setBranches(prev => [newBranch, ...prev]);
-      Alert.alert('Success', 'Branch created');
     } catch (e: any) {
-      console.error('Branch creation error:', e);
-      Alert.alert('Error', `Failed to create branch: ${e?.message || e?.toString() || 'Unknown error'}`);
+      console.error('Branch create/edit error:', e);
+      Alert.alert('Error', `Failed to save branch: ${e?.message || e?.toString() || 'Unknown error'}`);
     }
+  };
+
+  const handleDeleteBranch = async (branch: Branch) => {
+    Alert.alert('Delete Branch', `Are you sure you want to delete "${branch.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await deleteBranch(branch.id);
+            await deleteLocalBranch(branch.id);
+            setBranches(prev => prev.filter(b => b.id !== branch.id));
+            Alert.alert('Deleted', 'Branch deleted');
+          } catch (e: any) {
+            Alert.alert('Error', `Failed to delete branch: ${e?.message || e?.toString() || 'Unknown error'}`);
+          }
+        }
+      }
+    ]);
+  };
+
+  const openEditModal = (branch: Branch) => {
+    setEditBranch(branch);
+    setBranchName(branch.name);
+    setBranchAddress(branch.address);
+    setShowModal(true);
   };
 
   if (loading || !profile || profile.role !== 'admin') {
@@ -81,11 +119,16 @@ const BranchManagementScreen = () => {
         visible={showModal}
         animationType="slide"
         transparent
-        onRequestClose={() => setShowModal(false)}
+        onRequestClose={() => {
+          setShowModal(false);
+          setEditBranch(null);
+          setBranchName('');
+          setBranchAddress('');
+        }}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ backgroundColor: isDarkMode ? '#1f2937' : '#fff', borderRadius: 16, padding: 24, width: '90%' }}>
-            <Text className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Add Branch</Text>
+            <Text className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{editBranch ? 'Edit Branch' : 'Add Branch'}</Text>
             <TextInput
               placeholder="Branch Name"
               value={branchName}
@@ -102,16 +145,21 @@ const BranchManagementScreen = () => {
             />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
               <Pressable
-                onPress={() => setShowModal(false)}
+                onPress={() => {
+                  setShowModal(false);
+                  setEditBranch(null);
+                  setBranchName('');
+                  setBranchAddress('');
+                }}
                 style={{ paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8, backgroundColor: isDarkMode ? '#374151' : '#e5e7eb', marginRight: 8 }}
               >
                 <Text className={isDarkMode ? 'text-white' : 'text-gray-900'}>Cancel</Text>
               </Pressable>
               <Pressable
-                onPress={handleCreateBranch}
+                onPress={handleCreateOrEditBranch}
                 style={{ paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8, backgroundColor: isDarkMode ? '#eab308' : '#fde047' }}
               >
-                <Text className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Create</Text>
+                <Text className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{editBranch ? 'Save' : 'Create'}</Text>
               </Pressable>
             </View>
           </View>
@@ -150,7 +198,19 @@ const BranchManagementScreen = () => {
         renderItem={({ item }) => (
           <View className={`flex-row items-center py-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <FontAwesome name="building" size={18} color="#eab308" className="mr-2" />
-            <Text className={`text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{item.name}</Text>
+            <Text className={`flex-1 text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{item.name}</Text>
+            <Pressable
+              onPress={() => openEditModal(item)}
+              style={{ marginRight: 12, padding: 6, borderRadius: 6, backgroundColor: isDarkMode ? '#334155' : '#f3f4f6' }}
+            >
+              <FontAwesome name="edit" size={18} color={isDarkMode ? '#fde047' : '#a16207'} />
+            </Pressable>
+            <Pressable
+              onPress={() => handleDeleteBranch(item)}
+              style={{ padding: 6, borderRadius: 6, backgroundColor: isDarkMode ? '#7f1d1d' : '#fee2e2' }}
+            >
+              <FontAwesome name="trash" size={18} color={isDarkMode ? '#f87171' : '#b91c1c'} />
+            </Pressable>
           </View>
         )}
         ListEmptyComponent={<Text className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No branches found.</Text>}

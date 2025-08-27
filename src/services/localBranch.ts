@@ -16,3 +16,29 @@ export const saveLocalBranch = (branch: Branch): Promise<void> => {
   );
   return Promise.resolve();
 };
+
+export const deleteLocalBranch = (id: string): Promise<void> => {
+  db.runSync('UPDATE branches SET deleted = 1 WHERE id = ?', [id]);
+  return Promise.resolve();
+};
+
+export const updateLocalBranch = (id: string, updates: Partial<Branch>): Promise<void> => {
+  const fields = [];
+  const values = [];
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.address !== undefined) {
+    fields.push('address = ?');
+    values.push(updates.address);
+  }
+  if (updates.updated_at !== undefined) {
+    fields.push('updated_at = ?');
+    values.push(updates.updated_at);
+  }
+  if (fields.length === 0) return Promise.resolve();
+  values.push(id);
+  db.runSync(`UPDATE branches SET ${fields.join(', ')} WHERE id = ?`, values);
+  return Promise.resolve();
+};
