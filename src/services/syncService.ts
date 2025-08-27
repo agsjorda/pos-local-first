@@ -22,16 +22,39 @@ class SyncService {
       if (!db) throw new Error('Failed to open database');
       this.db = db;
       if (!this.db) throw new Error('Database not initialized');
+      // Profiles table
       this.db.runSync(`CREATE TABLE IF NOT EXISTS profiles (
-				id TEXT PRIMARY KEY,
-				email TEXT NOT NULL,
-				name TEXT,
-				role TEXT CHECK(role IN ('admin', 'manager', 'user')) DEFAULT 'user',
-				created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-				updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-				synced_at TEXT,
-				is_synced INTEGER DEFAULT 0
-			);`);
+        id TEXT PRIMARY KEY,
+        email TEXT NOT NULL,
+        name TEXT,
+        role TEXT CHECK(role IN ('admin', 'manager', 'user')) DEFAULT 'user',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        synced_at TEXT,
+        is_synced INTEGER DEFAULT 0
+      );`);
+      // Branches table (with address)
+      this.db.runSync(`CREATE TABLE IF NOT EXISTS branches (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        address TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );`);
+      // Migration: add address column if missing
+      try {
+        this.db.runSync('ALTER TABLE branches ADD COLUMN address TEXT');
+      } catch (e) {
+        // Ignore error if column already exists
+      }
+      // Branch assignments table
+      this.db.runSync(`CREATE TABLE IF NOT EXISTS branch_assignments (
+        branch_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        role TEXT CHECK(role IN ('manager', 'user')) NOT NULL,
+        assigned_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (branch_id, user_id)
+      );`);
       this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize database:', error);

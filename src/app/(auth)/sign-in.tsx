@@ -1,6 +1,7 @@
 // app/auth/SignInScreen.tsx
 import { View, Text, TextInput, Pressable, Switch, Alert, Image } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '~/contexts/themeContext';
 import { useAuth } from '~/contexts/authContext';
@@ -14,6 +15,21 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
+  // Load remembered credentials on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const creds = await AsyncStorage.getItem('remembered_credentials');
+        if (creds) {
+          const { email, password } = JSON.parse(creds);
+          setEmail(email);
+          setPassword(password);
+          setRememberMe(true);
+        }
+      } catch {}
+    })();
+  }, []);
+
   const handleAuth = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -21,6 +37,11 @@ export default function SignInScreen() {
     }
     try {
       await signIn(email, password);
+      if (rememberMe) {
+        await AsyncStorage.setItem('remembered_credentials', JSON.stringify({ email, password }));
+      } else {
+        await AsyncStorage.removeItem('remembered_credentials');
+      }
       Alert.alert('Success', 'Signed in successfully!');
       // Optionally navigate to home or dashboard here
     } catch (error: any) {

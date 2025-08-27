@@ -1,11 +1,15 @@
 import { supabase } from './supabase';
 import { Branch, BranchAssignment } from '../types';
-import { v4 as uuidv4 } from 'uuid';
+import uuid from 'react-native-uuid';
+import { saveLocalBranch } from './localBranch';
 
 export async function createBranch({ name, address }: { name: string; address: string }): Promise<Branch> {
-  const id = uuidv4();
+  const id = uuid.v4() as string;
+  // Insert into Supabase
   const { data, error } = await supabase.from('branches').insert([{ id, name, address }]).select().single();
   if (error) throw error;
+  // Insert into local SQLite
+  await saveLocalBranch(data as Branch);
   return data as Branch;
 }
 

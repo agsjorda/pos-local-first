@@ -12,14 +12,38 @@ export const initDatabase = () => {
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     synced_at TEXT,
-    is_synced INTEGER DEFAULT 0
+    is_synced INTEGER DEFAULT 0,
+    deleted INTEGER DEFAULT 0
   );`);
+  // Migration: add deleted column if missing
+  try {
+    db.runSync('ALTER TABLE profiles ADD COLUMN deleted INTEGER DEFAULT 0');
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+
+  // Add address column to branches if it doesn't exist
   db.runSync(`CREATE TABLE IF NOT EXISTS branches (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    address TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    deleted INTEGER DEFAULT 0
   );`);
+  // Migration: add deleted column if missing
+  try {
+    db.runSync('ALTER TABLE branches ADD COLUMN deleted INTEGER DEFAULT 0');
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+  // Migration: add address column if missing (for existing DBs)
+  try {
+    db.runSync('ALTER TABLE branches ADD COLUMN address TEXT');
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+
   db.runSync(`CREATE TABLE IF NOT EXISTS branch_assignments (
     branch_id TEXT NOT NULL,
     user_id TEXT NOT NULL,

@@ -43,7 +43,7 @@ export default function AdminPanel() {
             </Pressable>
             <Pressable className={`flex-row items-center p-3 ${isDarkMode ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-lg`}>
               <FontAwesome name="user-plus" size={20} color="#007AFF" className="mr-3" />
-              <Text className={`text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Add New User</Text>
+              <Text className={`text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Invite User</Text>
               <FontAwesome name="chevron-right" size={16} color={isDarkMode ? '#9CA3AF' : '#666'} className="ml-auto" />
             </Pressable>
             <Pressable className={`flex-row items-center p-3 ${isDarkMode ? 'bg-blue-900/30' : 'bg-blue-50'} rounded-lg`}>

@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '../services/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
