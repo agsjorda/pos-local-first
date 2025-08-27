@@ -14,6 +14,19 @@ export const initDatabase = () => {
     synced_at TEXT,
     is_synced INTEGER DEFAULT 0
   );`);
+  db.runSync(`CREATE TABLE IF NOT EXISTS branches (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );`);
+  db.runSync(`CREATE TABLE IF NOT EXISTS branch_assignments (
+    branch_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    role TEXT CHECK(role IN ('manager', 'user')) NOT NULL,
+    assigned_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (branch_id, user_id)
+  );`);
   return Promise.resolve(true);
 };
 

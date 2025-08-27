@@ -2,9 +2,11 @@ import { StyleSheet, View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTheme } from '../../contexts/themeContext';
+import { useRouter } from 'expo-router';
 
 export default function AdminPanel() {
   const { isDarkMode } = useTheme();
+  const router = useRouter();
 
   return (
     <SafeAreaView className={`flex-1 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -12,6 +14,23 @@ export default function AdminPanel() {
         <View className="py-6">
           <Text className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} text-center mb-2`}>Admin Panel</Text>
           <Text className={`text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-center mb-8`}>System Administration & Control</Text>
+        </View>
+        
+        {/* Branch Management link above User Management */}
+        <View className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl p-5 mb-4 shadow-sm`}>
+          <Text className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Branch Management</Text>
+          <View className="space-y-3">
+            <Pressable
+              className={`flex-row items-center p-3 ${isDarkMode ? 'bg-yellow-900/30' : 'bg-yellow-50'} rounded-lg`}
+              onPress={() => {
+                router.push('/admin/branch-management');
+              }}
+            >
+              <FontAwesome name="building" size={20} color="#eab308" className="mr-3" />
+              <Text className={`text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Go to Branch Management</Text>
+              <FontAwesome name="chevron-right" size={16} color={isDarkMode ? '#9CA3AF' : '#666'} className="ml-auto" />
+            </Pressable>
+          </View>
         </View>
         
         <View className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl p-5 mb-4 shadow-sm`}>

@@ -156,7 +156,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { error: signUpError } = await supabase.auth.signUp({
+    // 1. Sign up the user
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -168,6 +169,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (signUpError) {
       throw signUpError;
     }
+
+    // 2. Wait for user to be available
+    const user = signUpData.user;
+    if (!user) {
+      throw new Error('User not returned after sign up');
+    }
+
+    // 3. Check if this is the first user (no profiles exist)
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id')
+      .limit(1);
+    if (profilesError) {
+      throw profilesError;
+    }
+    const isFirstUser = !profiles || profiles.length === 0;
+    const role = isFirstUser ? 'admin' : 'user';
+
+    // 4. Upsert profile in Supabase
+    const { error: upsertError } = await supabase.from('profiles').upsert({
+      id: user.id,
+      email: user.email,
+      name,
+      role,
+    });
+    if (upsertError) {
+      throw upsertError;
+    }
+    // 5. Upsert profile locally (optional, will be synced anyway)
+    await syncService.ensureInitialized();
+    await syncService.getDatabase().runSync(
+      `INSERT OR REPLACE INTO profiles (id, email, name, role, is_synced) VALUES (?, ?, ?, ?, 1);`,
+      [user.id, user.email ?? '', name, role]
+    );
   };
 
   const signOut = async () => {
